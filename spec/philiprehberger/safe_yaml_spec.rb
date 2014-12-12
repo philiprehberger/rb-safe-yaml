@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "ostruct"
 require "tempfile"
 
 RSpec.describe Philiprehberger::SafeYaml do
