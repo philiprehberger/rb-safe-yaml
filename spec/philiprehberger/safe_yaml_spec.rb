@@ -158,4 +158,127 @@ RSpec.describe Philiprehberger::SafeYaml do
       end
     end
   end
+
+  describe ".load advanced" do
+    it "loads nested hashes" do
+      yaml = "parent:\n  child: value\n"
+      result = described_class.load(yaml)
+      expect(result).to eq("parent" => { "child" => "value" })
+    end
+
+    it "loads arrays" do
+      yaml = "items:\n  - one\n  - two\n  - three\n"
+      result = described_class.load(yaml)
+      expect(result["items"]).to eq(%w[one two three])
+    end
+
+    it "loads deeply nested structures" do
+      yaml = "a:\n  b:\n    c:\n      d: deep\n"
+      result = described_class.load(yaml)
+      expect(result["a"]["b"]["c"]["d"]).to eq("deep")
+    end
+
+    it "loads booleans" do
+      yaml = "flag: true\nother: false\n"
+      result = described_class.load(yaml)
+      expect(result["flag"]).to be true
+      expect(result["other"]).to be false
+    end
+
+    it "loads integers and floats" do
+      yaml = "int: 42\nfloat: 3.14\n"
+      result = described_class.load(yaml)
+      expect(result["int"]).to eq(42)
+      expect(result["float"]).to be_within(0.001).of(3.14)
+    end
+
+    it "loads null values" do
+      yaml = "key: null\n"
+      result = described_class.load(yaml)
+      expect(result["key"]).to be_nil
+    end
+
+    it "enforces max_size at exact boundary" do
+      yaml = "ok: true\n"
+      expect { described_class.load(yaml, max_size: yaml.bytesize) }.not_to raise_error
+      expect { described_class.load(yaml, max_size: yaml.bytesize - 1) }.to raise_error(
+        Philiprehberger::SafeYaml::SizeError
+      )
+    end
+
+    it "loads array at top level" do
+      yaml = "- one\n- two\n"
+      result = described_class.load(yaml)
+      expect(result).to eq(%w[one two])
+    end
+
+    it "loads string-only document" do
+      yaml = "--- hello\n"
+      result = described_class.load(yaml)
+      expect(result).to eq("hello")
+    end
+  end
+
+  describe Philiprehberger::SafeYaml::Schema do
+    describe "advanced validation" do
+      it "validates schema with no fields against a hash" do
+        empty_schema = described_class.new
+        expect(empty_schema.validate!({ "anything" => "goes" })).to be true
+      end
+
+      it "validates schema with no fields against empty hash" do
+        empty_schema = described_class.new
+        expect(empty_schema.validate!({})).to be true
+      end
+
+      it "validates Array type fields" do
+        array_schema = described_class.new do
+          required :tags, Array
+        end
+        expect(array_schema.validate!({ "tags" => %w[a b] })).to be true
+      end
+
+      it "rejects wrong type for Array field" do
+        array_schema = described_class.new do
+          required :tags, Array
+        end
+        result = array_schema.validate({ "tags" => "not-an-array" })
+        expect(result[:valid]).to be false
+      end
+
+      it "validates Hash type fields" do
+        hash_schema = described_class.new do
+          required :meta, Hash
+        end
+        expect(hash_schema.validate!({ "meta" => { "k" => "v" } })).to be true
+      end
+
+      it "collects multiple errors at once" do
+        strict = described_class.new do
+          required :a, String
+          required :b, Integer
+          required :c, Array
+        end
+        result = strict.validate({})
+        expect(result[:errors].length).to eq(3)
+      end
+
+      it "validates Float type" do
+        float_schema = described_class.new do
+          required :score, Float
+        end
+        expect(float_schema.validate!({ "score" => 9.5 })).to be true
+      end
+
+      it "raises SchemaError with semicolon-joined message for multiple errors" do
+        strict = described_class.new do
+          required :a, String
+          required :b, String
+        end
+        expect { strict.validate!({}) }.to raise_error(
+          Philiprehberger::SafeYaml::SchemaError, /;/
+        )
+      end
+    end
+  end
 end
