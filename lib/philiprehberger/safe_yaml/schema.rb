@@ -37,7 +37,7 @@ module Philiprehberger
         result = validate(data)
         return true if result[:valid]
 
-        raise SchemaError, result[:errors].join("; ")
+        raise SchemaError, result[:errors].join('; ')
       end
 
       # Validates data against the schema without raising.
