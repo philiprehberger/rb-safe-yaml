@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
 
   spec.summary = 'Safe YAML loading with restricted types, schema validation, and size limits'
   spec.description = 'Safe YAML loading with restricted types, schema validation, and size limits. ' \
-                       'Wraps YAML.safe_load with sensible defaults and provides a DSL for validating ' \
-                       'parsed YAML structure against a defined schema.'
+                     'Wraps YAML.safe_load with sensible defaults and provides a DSL for validating ' \
+                     'parsed YAML structure against a defined schema.'
   spec.homepage = 'https://philiprehberger.com/open-source-packages/ruby/philiprehberger-safe_yaml'
   spec.license = 'MIT'
 
