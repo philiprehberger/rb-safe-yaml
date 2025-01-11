@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'set'
 require 'yaml'
 
 module Philiprehberger
@@ -51,6 +52,61 @@ module Philiprehberger
       end
 
       private_class_method :validate_size!
+
+      # Safely dumps data to a YAML string with type validation.
+      #
+      # @param data [Object] the data to serialize
+      # @param permitted_classes [Array<Class>] additional classes allowed for serialization
+      # @return [String] the YAML string
+      # @raise [Error] if data contains unsafe types
+      def self.dump(data, permitted_classes: [])
+        validate_dumpable!(data, permitted_classes)
+        YAML.dump(data)
+      end
+
+      # Safely dumps data to a YAML file with type validation.
+      #
+      # @param data [Object] the data to serialize
+      # @param path [String] path to write the YAML file
+      # @param permitted_classes [Array<Class>] additional classes allowed for serialization
+      # @return [String] the YAML string written to the file
+      # @raise [Error] if data contains unsafe types
+      def self.dump_file(data, path, permitted_classes: [])
+        content = dump(data, permitted_classes: permitted_classes)
+        File.write(path, content)
+        content
+      end
+
+      # Validates that data only contains safe types for serialization.
+      #
+      # @param obj [Object] the object to validate
+      # @param permitted [Array<Class>] additional permitted classes
+      # @param seen [Set] object IDs already visited (cycle detection)
+      # @raise [Error] if obj contains unsafe types
+      def self.validate_dumpable!(obj, permitted, seen = Set.new)
+        return if seen.include?(obj.object_id)
+
+        seen.add(obj.object_id)
+
+        safe_types = [String, Integer, Float, TrueClass, FalseClass, NilClass]
+        all_allowed = safe_types + Array(permitted)
+
+        case obj
+        when Hash
+          obj.each do |k, v|
+            validate_dumpable!(k, permitted, seen)
+            validate_dumpable!(v, permitted, seen)
+          end
+        when Array
+          obj.each { |v| validate_dumpable!(v, permitted, seen) }
+        else
+          unless all_allowed.any? { |t| obj.is_a?(t) }
+            raise Error, "unsafe type for serialization: #{obj.class}"
+          end
+        end
+      end
+
+      private_class_method :validate_dumpable!
     end
   end
 end

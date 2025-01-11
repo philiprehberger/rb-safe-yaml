@@ -34,5 +34,26 @@ module Philiprehberger
     def self.load_file(path, **opts)
       Loader.load_file(path, **opts)
     end
+
+    # Safely dumps data to a YAML string with type validation.
+    #
+    # @param data [Object] the data to serialize
+    # @param permitted_classes [Array<Class>] additional classes allowed for serialization
+    # @return [String] the YAML string
+    # @raise [Error] if data contains unsafe types
+    def self.dump(data, permitted_classes: [])
+      Loader.dump(data, permitted_classes: permitted_classes)
+    end
+
+    # Safely dumps data to a YAML file with type validation.
+    #
+    # @param data [Object] the data to serialize
+    # @param path [String] path to write the YAML file
+    # @param permitted_classes [Array<Class>] additional classes allowed for serialization
+    # @return [String] the YAML string written to the file
+    # @raise [Error] if data contains unsafe types
+    def self.dump_file(data, path, permitted_classes: [])
+      Loader.dump_file(data, path, permitted_classes: permitted_classes)
+    end
   end
 end
