@@ -43,4 +43,4 @@ body:
       label: Gem version
       placeholder: "e.g., 0.2.0"
     validations:
-      required: false
+      required: true

@@ -82,6 +82,22 @@ result = schema.validate(data)
 # => { valid: true, errors: [] }
 ```
 
+### Custom Validation Rules
+
+```ruby
+schema = Philiprehberger::SafeYaml::Schema.new do
+  required :port, Integer, rule: ->(v) { (1..65_535).cover?(v) }, message: 'must be between 1 and 65535'
+  required :status, String, rule: ->(v) { %w[active inactive].include?(v) }
+  optional :email, String, rule: ->(v) { v.include?('@') }, message: 'must be a valid email'
+end
+
+schema.validate!({ 'port' => 80, 'status' => 'active' })
+# => true
+
+result = schema.validate({ 'port' => 0, 'status' => 'unknown' })
+# => { valid: false, errors: ["key port: must be between 1 and 65535", "key status: failed validation rule"] }
+```
+
 ## API
 
 | Method / Class | Description |
@@ -95,8 +111,8 @@ result = schema.validate(data)
 | `Loader.dump(data, permitted_classes:)` | Dump data to YAML with type validation |
 | `Loader.dump_file(data, path, permitted_classes:)` | Write validated YAML to file |
 | `Schema.new(&block)` | Define a validation schema with DSL |
-| `Schema#required(key, type)` | Declare a required key with expected type |
-| `Schema#optional(key, type)` | Declare an optional key with expected type |
+| `Schema#required(key, type, rule:, message:)` | Declare a required key with expected type and optional validation rule |
+| `Schema#optional(key, type, rule:, message:)` | Declare an optional key with expected type and optional validation rule |
 | `Schema#validate!(data)` | Validate and raise `SchemaError` on failure |
 | `Schema#validate(data)` | Validate and return `{ valid:, errors: }` |
 | `SafeYaml::Error` | Base error class |

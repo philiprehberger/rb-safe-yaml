@@ -14,18 +14,22 @@ module Philiprehberger
       #
       # @param key [String, Symbol] the key that must be present
       # @param type [Class] the expected type of the value
+      # @param rule [Proc, nil] optional validation predicate receiving the value
+      # @param message [String, nil] custom error message when rule fails
       # @return [void]
-      def required(key, type)
-        @fields << { key: key.to_s, type: type, required: true }
+      def required(key, type, rule: nil, message: nil)
+        @fields << { key: key.to_s, type: type, required: true, rule: rule, message: message }
       end
 
       # Declares an optional key with an expected type.
       #
       # @param key [String, Symbol] the key that may be present
       # @param type [Class] the expected type if the key is present
+      # @param rule [Proc, nil] optional validation predicate receiving the value
+      # @param message [String, nil] custom error message when rule fails
       # @return [void]
-      def optional(key, type)
-        @fields << { key: key.to_s, type: type, required: false }
+      def optional(key, type, rule: nil, message: nil)
+        @fields << { key: key.to_s, type: type, required: false, rule: rule, message: message }
       end
 
       # Validates data against the schema, raising on failure.
@@ -73,6 +77,7 @@ module Philiprehberger
         key = field[:key]
         return missing_error(key, field) unless data.key?(key)
         return type_error(key, field, data[key]) unless data[key].is_a?(field[:type])
+        return rule_error(key, field, data[key]) if field[:rule] && !field[:rule].call(data[key])
 
         []
       end
@@ -94,6 +99,17 @@ module Philiprehberger
       # @return [Array<String>] single-element error array
       def type_error(key, field, value)
         ["key #{key}: expected #{field[:type]}, got #{value.class}"]
+      end
+
+      # Returns a rule-validation error.
+      #
+      # @param key [String] the key that failed the rule
+      # @param field [Hash] the field definition
+      # @param _value [Object] the actual value
+      # @return [Array<String>] single-element error array
+      def rule_error(key, field, _value)
+        msg = field[:message] || 'failed validation rule'
+        ["key #{key}: #{msg}"]
       end
     end
   end
