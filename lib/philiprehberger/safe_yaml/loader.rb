@@ -22,7 +22,7 @@ module Philiprehberger
           string,
           permitted_classes: permitted_classes,
           permitted_symbols: [],
-          aliases: max_aliases > 0
+          aliases: max_aliases.positive?
         )
       end
 

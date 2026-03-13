@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "ostruct"
 require "tempfile"
+
+TestStruct = Struct.new(:table, keyword_init: true)
 
 RSpec.describe Philiprehberger::SafeYaml do
   it "has a version number" do
@@ -25,18 +26,18 @@ RSpec.describe Philiprehberger::SafeYaml do
     end
 
     it "rejects unsafe classes by default" do
-      yaml = "--- !ruby/object:OpenStruct\ntable:\n  name: evil\n"
+      yaml = "--- !ruby/object:TestStruct\ntable:\n  name: evil\n"
       expect { described_class.load(yaml) }.to raise_error(Psych::DisallowedClass)
     end
 
     it "allows permitted_classes to be specified" do
-      yaml = "--- !ruby/object:OpenStruct\ntable:\n  name: test\n"
-      result = described_class.load(yaml, permitted_classes: [OpenStruct])
-      expect(result).to be_a(OpenStruct)
+      yaml = "--- !ruby/object:TestStruct\ntable:\n  name: test\n"
+      result = described_class.load(yaml, permitted_classes: [TestStruct])
+      expect(result).to be_a(TestStruct)
     end
 
     it "raises SizeError when input exceeds max_size" do
-      yaml = "data: #{"x" * 100}\n"
+      yaml = "data: #{'x' * 100}\n"
       expect { described_class.load(yaml, max_size: 10) }.to raise_error(
         Philiprehberger::SafeYaml::SizeError, /exceeds maximum size/
       )
@@ -66,7 +67,7 @@ RSpec.describe Philiprehberger::SafeYaml do
 
     it "raises SizeError for an oversized file" do
       file = Tempfile.new(["big", ".yml"])
-      file.write("data: #{"x" * 200}\n")
+      file.write("data: #{'x' * 200}\n")
       file.close
 
       expect { described_class.load_file(file.path, max_size: 10) }.to raise_error(
