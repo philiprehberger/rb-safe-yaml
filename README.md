@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/philiprehberger/rb-safe-yaml/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-safe-yaml/actions/workflows/ci.yml)
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-safe_yaml.svg)](https://rubygems.org/gems/philiprehberger-safe_yaml)
+[![License](https://img.shields.io/github/license/philiprehberger/rb-safe-yaml)](LICENSE)
 
 Safe YAML loading with restricted types, schema validation, and size limits.
 
