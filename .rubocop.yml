@@ -22,3 +22,6 @@ Layout/LineLength:
 
 Style/RedundantFetchBlock:
   Enabled: false
+
+Layout/EndOfLine:
+  Enabled: false
