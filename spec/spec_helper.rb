@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "philiprehberger/safe_yaml"
+require 'philiprehberger/safe_yaml'
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|

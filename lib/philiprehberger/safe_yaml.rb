@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "safe_yaml/version"
-require_relative "safe_yaml/loader"
-require_relative "safe_yaml/schema"
+require_relative 'safe_yaml/version'
+require_relative 'safe_yaml/loader'
+require_relative 'safe_yaml/schema'
 
 module Philiprehberger
   module SafeYaml
