@@ -52,6 +52,16 @@ Philiprehberger::SafeYaml.load(huge_string, max_size: 1024)
 data = Philiprehberger::SafeYaml.load(yaml_string, permitted_classes: [Symbol, Date])
 ```
 
+### Safe Serialization
+
+```ruby
+require "philiprehberger/safe_yaml"
+
+data = { "host" => "localhost", "port" => 3000, "debug" => true }
+yaml_string = Philiprehberger::SafeYaml.dump(data)
+Philiprehberger::SafeYaml.dump_file(data, "config.yml")
+```
+
 ### Schema Validation
 
 ```ruby
@@ -78,8 +88,12 @@ result = schema.validate(data)
 |----------------|-------------|
 | `SafeYaml.load(string, **opts)` | Safely load a YAML string |
 | `SafeYaml.load_file(path, **opts)` | Safely load a YAML file |
+| `SafeYaml.dump(data, permitted_classes:)` | Safely dump data to a YAML string |
+| `SafeYaml.dump_file(data, path, permitted_classes:)` | Safely dump data to a YAML file |
 | `Loader.load(string, permitted_classes:, max_aliases:, max_size:)` | Core safe loading with all options |
 | `Loader.load_file(path, **opts)` | Read file and delegate to `Loader.load` |
+| `Loader.dump(data, permitted_classes:)` | Dump data to YAML with type validation |
+| `Loader.dump_file(data, path, permitted_classes:)` | Write validated YAML to file |
 | `Schema.new(&block)` | Define a validation schema with DSL |
 | `Schema#required(key, type)` | Declare a required key with expected type |
 | `Schema#optional(key, type)` | Declare an optional key with expected type |

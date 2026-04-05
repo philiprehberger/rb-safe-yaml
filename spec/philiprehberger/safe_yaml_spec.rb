@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'date'
+require 'fileutils'
 require 'tempfile'
+require 'tmpdir'
 
 TestStruct = Struct.new(:table, keyword_init: true)
 
@@ -279,6 +282,49 @@ RSpec.describe Philiprehberger::SafeYaml do
           Philiprehberger::SafeYaml::SchemaError, /;/
         )
       end
+    end
+  end
+
+  describe '.dump' do
+    it 'dumps safe data to YAML string' do
+      data = { 'name' => 'test', 'count' => 42 }
+      result = described_class.dump(data)
+      expect(YAML.safe_load(result)).to eq(data)
+    end
+
+    it 'dumps arrays' do
+      data = [1, 'two', 3.0, true, nil]
+      result = described_class.dump(data)
+      expect(YAML.safe_load(result)).to eq(data)
+    end
+
+    it 'raises for unsafe types' do
+      expect { described_class.dump({ 'key' => Object.new }) }.to raise_error(Philiprehberger::SafeYaml::Error)
+    end
+
+    it 'allows permitted classes' do
+      data = { 'date' => Date.today }
+      expect { described_class.dump(data, permitted_classes: [Date]) }.not_to raise_error
+    end
+  end
+
+  describe '.dump_file' do
+    let(:tmpdir) { Dir.mktmpdir }
+    let(:output_path) { File.join(tmpdir, 'output.yml') }
+
+    after { FileUtils.remove_entry(tmpdir) }
+
+    it 'writes YAML to file' do
+      data = { 'host' => 'localhost', 'port' => 3000 }
+      described_class.dump_file(data, output_path)
+      expect(File.exist?(output_path)).to be true
+      expect(YAML.safe_load_file(output_path)).to eq(data)
+    end
+
+    it 'returns the YAML string' do
+      data = { 'key' => 'value' }
+      result = described_class.dump_file(data, output_path)
+      expect(result).to be_a(String)
     end
   end
 end

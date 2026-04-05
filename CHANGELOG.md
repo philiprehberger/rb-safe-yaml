@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-04
+
+### Added
+- `dump` method for safe YAML serialization with type validation
+- `dump_file` method for writing safe YAML to files
+- GitHub issue template gem version field
+- Feature request "Alternatives considered" field
+
 ## [0.1.9] - 2026-03-31
 
 ### Added
