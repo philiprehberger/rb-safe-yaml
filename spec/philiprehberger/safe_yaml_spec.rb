@@ -283,6 +283,66 @@ RSpec.describe Philiprehberger::SafeYaml do
         )
       end
     end
+
+    describe 'custom validation rules' do
+      it 'passes when the rule returns true' do
+        schema = described_class.new do
+          required :port, Integer, rule: ->(v) { (1..65_535).cover?(v) }
+        end
+        expect(schema.validate!({ 'port' => 8080 })).to be true
+      end
+
+      it 'fails when the rule returns false' do
+        schema = described_class.new do
+          required :port, Integer, rule: ->(v) { (1..65_535).cover?(v) }
+        end
+        result = schema.validate({ 'port' => 0 })
+        expect(result[:valid]).to be false
+        expect(result[:errors]).to include(/failed validation rule/)
+      end
+
+      it 'uses custom message when provided' do
+        schema = described_class.new do
+          required :port, Integer, rule: :positive?.to_proc, message: 'must be positive'
+        end
+        result = schema.validate({ 'port' => -1 })
+        expect(result[:errors]).to include(/must be positive/)
+      end
+
+      it 'does not run the rule when the type check fails' do
+        called = false
+        schema = described_class.new do
+          required :port, Integer, rule: ->(_v) { called = true }
+        end
+        schema.validate({ 'port' => 'not a number' })
+        expect(called).to be false
+      end
+
+      it 'does not run the rule on a missing optional field' do
+        called = false
+        schema = described_class.new do
+          optional :email, String, rule: ->(_v) { called = true }
+        end
+        expect(schema.validate!({ 'name' => 'Alice' })).to be true
+        expect(called).to be false
+      end
+
+      it 'runs the rule on a present optional field' do
+        schema = described_class.new do
+          optional :status, String, rule: ->(v) { %w[active inactive].include?(v) }, message: 'invalid status'
+        end
+        result = schema.validate({ 'status' => 'unknown' })
+        expect(result[:valid]).to be false
+        expect(result[:errors]).to include(/invalid status/)
+      end
+
+      it 'passes when optional field with rule has valid value' do
+        schema = described_class.new do
+          optional :email, String, rule: ->(v) { v.include?('@') }
+        end
+        expect(schema.validate!({ 'email' => 'a@b.com' })).to be true
+      end
+    end
   end
 
   describe '.dump' do

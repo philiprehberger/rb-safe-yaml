@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-11
+
+### Added
+- `rule:` keyword argument on `Schema#required` and `Schema#optional` for custom validation predicates
+- `message:` keyword argument for custom validation error messages when rules fail
+
+### Fixed
+- Bug report template gem version field now required
+- Removed duplicate `[0.1.4]` entry in CHANGELOG
+
 ## [0.2.0] - 2026-04-04
 
 ### Added
@@ -46,11 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Expand test coverage to 30+ examples with nested structures, arrays, booleans, null values, boundary size checks, and schema validation edge cases
-
-## [0.1.4] - 2026-03-21
-
-### Fixed
-- Standardize Installation section in README
 
 ## [0.1.3] - 2026-03-16
 
