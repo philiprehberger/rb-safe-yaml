@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-14
+
+### Added
+- `max_aliases:` keyword on `SafeYaml.load` — controls alias limit passed to YAML.safe_load; raises `Error` when count exceeds limit
+- `SafeYaml.load_and_validate(string, schema:, **opts)` — convenience method combining load and schema validation in one call
+- `SafeYaml.sanitize(string)` — strips full-line comments, normalizes trailing whitespace, and validates YAML syntax
+- `SafeYaml.load_with_defaults(string, defaults: {})` — parses YAML then deep merges over a defaults hash
+
 ## [0.3.0] - 2026-04-11
 
 ### Added

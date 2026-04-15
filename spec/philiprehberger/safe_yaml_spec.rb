@@ -345,6 +345,150 @@ RSpec.describe Philiprehberger::SafeYaml do
     end
   end
 
+  describe '.load with max_aliases' do
+    let(:yaml_with_anchor) do
+      "defaults: &defaults\n  adapter: postgres\n  host: localhost\n" \
+        "development:\n  <<: *defaults\n  database: dev_db\n"
+    end
+
+    let(:yaml_no_aliases) { "name: Alice\nage: 30\n" }
+
+    it 'blocks aliases when max_aliases is 0 (default)' do
+      expect { described_class.load(yaml_with_anchor) }.to raise_error(Psych::BadAlias)
+    end
+
+    it 'allows aliases when max_aliases is greater than 0' do
+      result = described_class.load(yaml_with_anchor, max_aliases: 1)
+      expect(result['development']['adapter']).to eq('postgres')
+    end
+
+    it 'loads YAML without aliases regardless of max_aliases setting' do
+      result = described_class.load(yaml_no_aliases, max_aliases: 5)
+      expect(result).to eq('name' => 'Alice', 'age' => 30)
+    end
+
+    it 'raises Error when alias count exceeds max_aliases' do
+      yaml = "a: &a\n  x: 1\nb: *a\nc: *a\nd: *a\n"
+      expect { described_class.load(yaml, max_aliases: 1) }.to raise_error(
+        Philiprehberger::SafeYaml::Error, /exceeding limit/
+      )
+    end
+
+    it 'allows aliases up to the exact limit' do
+      yaml = "a: &a\n  x: 1\nb: *a\n"
+      result = described_class.load(yaml, max_aliases: 1)
+      expect(result['b']).to eq({ 'x' => 1 })
+    end
+  end
+
+  describe '.load_and_validate' do
+    let(:schema) do
+      Philiprehberger::SafeYaml::Schema.new do
+        required :name, String
+        required :port, Integer
+      end
+    end
+
+    it 'returns parsed data when valid' do
+      yaml = "name: app\nport: 3000\n"
+      result = described_class.load_and_validate(yaml, schema: schema)
+      expect(result).to eq('name' => 'app', 'port' => 3000)
+    end
+
+    it 'raises SchemaError when a required key is missing' do
+      yaml = "name: app\n"
+      expect { described_class.load_and_validate(yaml, schema: schema) }.to raise_error(
+        Philiprehberger::SafeYaml::SchemaError, /missing required key: port/
+      )
+    end
+
+    it 'raises SchemaError when a key has the wrong type' do
+      yaml = "name: app\nport: not_a_number\n"
+      expect { described_class.load_and_validate(yaml, schema: schema) }.to raise_error(
+        Philiprehberger::SafeYaml::SchemaError, /expected Integer/
+      )
+    end
+
+    it 'forwards options to load' do
+      yaml = "name: app\nport: 3000\n"
+      expect do
+        described_class.load_and_validate(yaml, schema: schema, max_size: 5)
+      end.to raise_error(Philiprehberger::SafeYaml::SizeError)
+    end
+  end
+
+  describe '.sanitize' do
+    it 'strips full-line comments' do
+      raw = "# comment\nname: Alice\n"
+      result = described_class.sanitize(raw)
+      expect(result).not_to include('# comment')
+      expect(result).to include('name: Alice')
+    end
+
+    it 'strips multiple comment lines' do
+      raw = "# first\n# second\nkey: value\n# trailing\n"
+      result = described_class.sanitize(raw)
+      expect(result.strip).to eq('key: value')
+    end
+
+    it 'preserves data lines intact' do
+      raw = "host: localhost\nport: 3000\n"
+      result = described_class.sanitize(raw)
+      data = YAML.safe_load(result)
+      expect(data).to eq('host' => 'localhost', 'port' => 3000)
+    end
+
+    it 'normalizes trailing whitespace' do
+      raw = "name: Alice   \nage: 30  \n"
+      result = described_class.sanitize(raw)
+      result.each_line do |line|
+        expect(line).not_to match(/[^\S\n]+$/)
+      end
+    end
+
+    it 'raises Error for invalid YAML syntax' do
+      raw = "key: [invalid\n"
+      expect { described_class.sanitize(raw) }.to raise_error(Psych::SyntaxError)
+    end
+  end
+
+  describe '.load_with_defaults' do
+    it 'merges parsed values over defaults' do
+      defaults = { 'host' => 'localhost', 'port' => 3000 }
+      yaml = "port: 8080\n"
+      result = described_class.load_with_defaults(yaml, defaults: defaults)
+      expect(result).to eq('host' => 'localhost', 'port' => 8080)
+    end
+
+    it 'uses all defaults when YAML is empty' do
+      defaults = { 'host' => 'localhost', 'port' => 3000 }
+      result = described_class.load_with_defaults('', defaults: defaults)
+      expect(result).to eq(defaults)
+    end
+
+    it 'deep merges nested hashes' do
+      defaults = { 'db' => { 'pool' => 5, 'timeout' => 30 } }
+      yaml = "db:\n  pool: 10\n"
+      result = described_class.load_with_defaults(yaml, defaults: defaults)
+      expect(result['db']).to eq('pool' => 10, 'timeout' => 30)
+    end
+
+    it 'adds new keys from parsed data' do
+      defaults = { 'host' => 'localhost' }
+      yaml = "port: 8080\n"
+      result = described_class.load_with_defaults(yaml, defaults: defaults)
+      expect(result).to eq('host' => 'localhost', 'port' => 8080)
+    end
+
+    it 'forwards options to load' do
+      defaults = { 'key' => 'default' }
+      yaml = "key: value\n"
+      expect do
+        described_class.load_with_defaults(yaml, defaults: defaults, max_size: 1)
+      end.to raise_error(Philiprehberger::SafeYaml::SizeError)
+    end
+  end
+
   describe '.dump' do
     it 'dumps safe data to YAML string' do
       data = { 'name' => 'test', 'count' => 42 }

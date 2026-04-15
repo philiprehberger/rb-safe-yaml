@@ -55,5 +55,38 @@ module Philiprehberger
     def self.dump_file(data, path, permitted_classes: [])
       Loader.dump_file(data, path, permitted_classes: permitted_classes)
     end
+
+    # Loads and validates a YAML string against a schema in one step.
+    #
+    # @param string [String] the YAML string to parse
+    # @param schema [Schema] the schema to validate against
+    # @param opts [Hash] options forwarded to {Loader.load}
+    # @return [Object] the parsed and validated YAML data
+    # @raise [SchemaError] if validation fails
+    def self.load_and_validate(string, schema:, **opts)
+      data = Loader.load(string, **opts)
+      schema.validate!(data)
+      data
+    end
+
+    # Sanitizes a YAML string by stripping full-line comments and normalizing whitespace.
+    #
+    # @param string [String] the raw YAML string
+    # @return [String] the cleaned YAML string
+    # @raise [Error] if the sanitized string is not valid YAML
+    def self.sanitize(string)
+      Loader.sanitize(string)
+    end
+
+    # Loads a YAML string and deep merges over default values.
+    #
+    # @param string [String] the YAML string to parse
+    # @param defaults [Hash] default values to merge under parsed data
+    # @param opts [Hash] options forwarded to {Loader.load}
+    # @return [Hash] the merged result with parsed values taking precedence
+    def self.load_with_defaults(string, defaults: {}, **opts)
+      data = Loader.load(string, **opts)
+      Loader.deep_merge(defaults, data || {})
+    end
   end
 end
