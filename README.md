@@ -82,6 +82,56 @@ result = schema.validate(data)
 # => { valid: true, errors: [] }
 ```
 
+### Alias Limits
+
+```ruby
+# Block all aliases (default behavior)
+Philiprehberger::SafeYaml.load(yaml_with_aliases)
+# => raises Psych::BadAlias
+
+# Allow up to 3 aliases
+data = Philiprehberger::SafeYaml.load(yaml_with_aliases, max_aliases: 3)
+
+# Exceeding the limit raises an error
+Philiprehberger::SafeYaml.load(yaml_with_many_aliases, max_aliases: 2)
+# => raises Philiprehberger::SafeYaml::Error
+```
+
+### Load and Validate
+
+```ruby
+schema = Philiprehberger::SafeYaml::Schema.new do
+  required :name, String
+  required :port, Integer
+end
+
+# Parse and validate in one step
+data = Philiprehberger::SafeYaml.load_and_validate("name: app\nport: 3000\n", schema: schema)
+# => {"name"=>"app", "port"=>3000}
+
+# Raises SchemaError if validation fails
+Philiprehberger::SafeYaml.load_and_validate("name: app\n", schema: schema)
+# => raises Philiprehberger::SafeYaml::SchemaError
+```
+
+### Sanitize
+
+```ruby
+raw = "# This is a comment\nname: Alice\n# Another comment\nage: 30\n"
+cleaned = Philiprehberger::SafeYaml.sanitize(raw)
+# => "name: Alice\nage: 30\n"
+```
+
+### Defaults Merge
+
+```ruby
+defaults = { 'host' => 'localhost', 'port' => 3000, 'db' => { 'pool' => 5, 'timeout' => 30 } }
+yaml = "port: 8080\ndb:\n  pool: 10\n"
+
+data = Philiprehberger::SafeYaml.load_with_defaults(yaml, defaults: defaults)
+# => {"host"=>"localhost", "port"=>8080, "db"=>{"pool"=>10, "timeout"=>30}}
+```
+
 ### Custom Validation Rules
 
 ```ruby
@@ -104,6 +154,9 @@ result = schema.validate({ 'port' => 0, 'status' => 'unknown' })
 |----------------|-------------|
 | `SafeYaml.load(string, **opts)` | Safely load a YAML string |
 | `SafeYaml.load_file(path, **opts)` | Safely load a YAML file |
+| `SafeYaml.load_and_validate(string, schema:, **opts)` | Load and validate in one step |
+| `SafeYaml.load_with_defaults(string, defaults:, **opts)` | Load and deep merge over defaults |
+| `SafeYaml.sanitize(string)` | Strip comments and normalize whitespace |
 | `SafeYaml.dump(data, permitted_classes:)` | Safely dump data to a YAML string |
 | `SafeYaml.dump_file(data, path, permitted_classes:)` | Safely dump data to a YAML file |
 | `Loader.load(string, permitted_classes:, max_aliases:, max_size:)` | Core safe loading with all options |
