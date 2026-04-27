@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-26
+
+### Added
+- `SafeYaml.merge(*sources, as_files: nil, **load_opts)` — loads each YAML source through the safe loader and deep merges them in order, with later sources winning. Sources may be inline YAML strings or file paths (auto-detected via `File.file?`, override with `as_files:`). Arrays are replaced (not concatenated). Raises `ArgumentError` when a source does not yield a Hash.
+
 ## [0.4.0] - 2026-04-14
 
 ### Added

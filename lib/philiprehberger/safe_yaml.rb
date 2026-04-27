@@ -88,5 +88,71 @@ module Philiprehberger
       data = Loader.load(string, **opts)
       Loader.deep_merge(defaults, data || {})
     end
+
+    # Loads multiple YAML sources through the safe loader and deep merges them
+    # in order, with later sources winning on conflicts.
+    #
+    # Each source may be either inline YAML or a path to a YAML file. The
+    # following heuristic distinguishes the two: when +as_files+ is +nil+
+    # (the default), a String source is treated as a file path if
+    # +File.file?(source)+ returns true, and as inline YAML otherwise.
+    # Pass +as_files: false+ to force every source to be parsed as inline
+    # YAML, or +as_files: true+ to force every source to be read as a file.
+    #
+    # All sources are loaded through {Loader.load} so size, alias, and
+    # permitted-class limits passed via +load_opts+ apply uniformly.
+    #
+    # Merge semantics:
+    # - Nested Hashes are merged recursively.
+    # - Non-Hash conflicts (including arrays) are replaced by the later
+    #   source's value. Arrays are not concatenated.
+    # - An empty source list returns an empty Hash.
+    #
+    # @param sources [Array<String>] inline YAML strings or file paths
+    # @param as_files [Boolean, nil] +nil+ auto-detect (default), +true+
+    #   treat all sources as file paths, +false+ treat all as inline YAML
+    # @param load_opts [Hash] options forwarded to {Loader.load}
+    #   (e.g. +permitted_classes:+, +max_aliases:+, +max_size:+)
+    # @return [Hash] the deeply merged result
+    # @raise [ArgumentError] if any source does not parse to a Hash
+    # @raise [SizeError] if a source exceeds max_size
+    def self.merge(*sources, as_files: nil, **load_opts)
+      sources.each_with_index.reduce({}) do |acc, (source, idx)|
+        result = load_source(source, idx, as_files, load_opts)
+        unless result.is_a?(Hash)
+          raise ArgumentError,
+                "merge sources must yield Hash, got #{result.class} from source #{idx}"
+        end
+        Loader.deep_merge(acc, result)
+      end
+    end
+
+    # Loads a single source for {.merge}, applying the file/inline heuristic.
+    #
+    # @param source [String] inline YAML or file path
+    # @param idx [Integer] source index (used in error messages)
+    # @param as_files [Boolean, nil] override flag from {.merge}
+    # @param load_opts [Hash] options forwarded to {Loader.load}
+    # @return [Object] the parsed YAML value
+    def self.load_source(source, idx, as_files, load_opts)
+      treat_as_file =
+        case as_files
+        when true then true
+        when false then false
+        else source.is_a?(String) && File.file?(source)
+        end
+
+      if treat_as_file
+        Loader.load_file(source, **load_opts)
+      else
+        unless source.is_a?(String)
+          raise ArgumentError,
+                "merge sources must be String YAML or file paths, got #{source.class} at index #{idx}"
+        end
+        Loader.load(source, **load_opts)
+      end
+    end
+
+    private_class_method :load_source
   end
 end

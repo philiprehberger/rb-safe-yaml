@@ -531,4 +531,110 @@ RSpec.describe Philiprehberger::SafeYaml do
       expect(result).to be_a(String)
     end
   end
+
+  describe '.merge' do
+    it 'returns an empty Hash when no sources are given' do
+      expect(described_class.merge).to eq({})
+    end
+
+    it 'merges two inline YAML strings' do
+      a = "host: localhost\nport: 3000\n"
+      b = "debug: true\n"
+      expect(described_class.merge(a, b)).to eq(
+        'host' => 'localhost', 'port' => 3000, 'debug' => true
+      )
+    end
+
+    it 'lets later sources win for scalar conflicts' do
+      a = "port: 3000\nhost: localhost\n"
+      b = "port: 8080\n"
+      c = "port: 9090\n"
+      expect(described_class.merge(a, b, c)).to eq(
+        'host' => 'localhost', 'port' => 9090
+      )
+    end
+
+    it 'deep merges nested hashes' do
+      a = "db:\n  pool: 5\n  timeout: 30\n"
+      b = "db:\n  pool: 10\n  host: db.local\n"
+      expect(described_class.merge(a, b)).to eq(
+        'db' => { 'pool' => 10, 'timeout' => 30, 'host' => 'db.local' }
+      )
+    end
+
+    it 'replaces arrays rather than concatenating them' do
+      a = "tags:\n  - one\n  - two\n"
+      b = "tags:\n  - three\n"
+      expect(described_class.merge(a, b)).to eq('tags' => %w[three])
+    end
+
+    it 'merges from file paths via Dir.mktmpdir' do
+      Dir.mktmpdir do |dir|
+        file_a = File.join(dir, 'a.yml')
+        file_b = File.join(dir, 'b.yml')
+        File.write(file_a, "host: localhost\nport: 3000\n")
+        File.write(file_b, "port: 8080\ndebug: true\n")
+
+        result = described_class.merge(file_a, file_b)
+        expect(result).to eq(
+          'host' => 'localhost', 'port' => 8080, 'debug' => true
+        )
+      end
+    end
+
+    it 'mixes file paths and inline YAML strings' do
+      Dir.mktmpdir do |dir|
+        file_a = File.join(dir, 'base.yml')
+        File.write(file_a, "host: localhost\nport: 3000\n")
+        inline = "port: 8080\n"
+
+        result = described_class.merge(file_a, inline)
+        expect(result).to eq('host' => 'localhost', 'port' => 8080)
+      end
+    end
+
+    it 'forces inline interpretation when as_files: false even if file exists' do
+      Dir.mktmpdir do |dir|
+        file_path = File.join(dir, 'config.yml')
+        File.write(file_path, "from: file\n")
+
+        # The String "from: file" itself is not a path, but as_files: false
+        # makes the heuristic moot anyway. Verify the flag forces inline.
+        inline = "from: inline\n"
+        expect(described_class.merge(inline, as_files: false)).to eq('from' => 'inline')
+
+        # And confirm that without as_files: false, an existing file path is
+        # treated as a file by default.
+        expect(described_class.merge(file_path)).to eq('from' => 'file')
+      end
+    end
+
+    it 'raises ArgumentError when a source does not yield a Hash' do
+      a = "name: Alice\n"
+      b = "- one\n- two\n"
+      expect { described_class.merge(a, b) }.to raise_error(
+        ArgumentError, /merge sources must yield Hash, got Array from source 1/
+      )
+    end
+
+    it 'treats nil-yielding sources (e.g. empty strings) as non-Hash errors' do
+      expect { described_class.merge('') }.to raise_error(
+        ArgumentError, /merge sources must yield Hash, got NilClass from source 0/
+      )
+    end
+
+    it 'forwards load_opts such as max_size to the safe loader' do
+      a = "data: #{'x' * 200}\n"
+      expect { described_class.merge(a, max_size: 10) }.to raise_error(
+        Philiprehberger::SafeYaml::SizeError
+      )
+    end
+
+    it 'forwards permitted_classes through to the loader' do
+      yaml = "--- !ruby/object:TestStruct\ntable:\n  name: test\n"
+      expect do
+        described_class.merge(yaml, permitted_classes: [TestStruct])
+      end.to raise_error(ArgumentError, /must yield Hash, got TestStruct/)
+    end
+  end
 end

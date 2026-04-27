@@ -132,6 +132,21 @@ data = Philiprehberger::SafeYaml.load_with_defaults(yaml, defaults: defaults)
 # => {"host"=>"localhost", "port"=>8080, "db"=>{"pool"=>10, "timeout"=>30}}
 ```
 
+### Merging
+
+Merge multiple YAML sources into a single deeply merged Hash. Each source can be either inline YAML or a path to a YAML file. When `as_files` is `nil` (the default), a String source is treated as a file path if `File.file?(source)` is true, and as inline YAML otherwise. Pass `as_files: false` to force inline interpretation. Later sources win on conflicts; nested Hashes are deep-merged; arrays are **replaced**, not concatenated.
+
+```ruby
+base   = "host: localhost\nport: 3000\ndb:\n  pool: 5\n  timeout: 30\n"
+override = "port: 8080\ndb:\n  pool: 10\n"
+
+Philiprehberger::SafeYaml.merge(base, override)
+# => {"host"=>"localhost", "port"=>8080, "db"=>{"pool"=>10, "timeout"=>30}}
+
+# Mix files and inline YAML; load_opts (max_size, permitted_classes, ...) propagate
+Philiprehberger::SafeYaml.merge('config/defaults.yml', 'config/overrides.yml', max_size: 10_240)
+```
+
 ### Custom Validation Rules
 
 ```ruby
@@ -156,6 +171,7 @@ result = schema.validate({ 'port' => 0, 'status' => 'unknown' })
 | `SafeYaml.load_file(path, **opts)` | Safely load a YAML file |
 | `SafeYaml.load_and_validate(string, schema:, **opts)` | Load and validate in one step |
 | `SafeYaml.load_with_defaults(string, defaults:, **opts)` | Load and deep merge over defaults |
+| `SafeYaml.merge(*sources, as_files:, **load_opts)` | Deep merge multiple inline YAML strings and/or file paths (later wins; arrays replaced) |
 | `SafeYaml.sanitize(string)` | Strip comments and normalize whitespace |
 | `SafeYaml.dump(data, permitted_classes:)` | Safely dump data to a YAML string |
 | `SafeYaml.dump_file(data, path, permitted_classes:)` | Safely dump data to a YAML file |
